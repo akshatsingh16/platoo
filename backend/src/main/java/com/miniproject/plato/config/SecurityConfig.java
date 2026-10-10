@@ -17,6 +17,11 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
  * Master Spring Security configuration.
@@ -48,9 +53,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
 
                 // ── CORS ─────────────────────────────────────────────────────────
-                // Enable CORS with defaults for now.
-                // TODO Day 19: restrict to production frontend domain only.
-                .cors(AbstractHttpConfigurer::disable)
+                // Allow the Next.js frontend to make cross-origin requests.
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
                 // ── Session Management ───────────────────────────────────────────
                 // STATELESS = Spring never creates an HttpSession.
@@ -128,6 +132,24 @@ public class SecurityConfig {
             AuthenticationConfiguration config
     ) throws Exception {
         return config.getAuthenticationManager();
+    }
+
+    /**
+     * CORS configuration — allows the Next.js dev server (localhost:3000)
+     * to make API calls to this backend.
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(List.of("http://localhost:3000"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/api/**", config);
+        return source;
     }
 }
 

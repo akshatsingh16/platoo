@@ -1,0 +1,66 @@
+import {
+  Utensils,
+} from "lucide-react"
+
+import { Card } from "@/components/ui/card"
+
+import { MenuCard } from "./menucard"
+import type { MenuItem } from "./menudata"
+
+type MenuGridProps = {
+  items: MenuItem[]
+  favorites: number[]
+  cart: Record<number, number>
+  onToggleFavorite: (id: number) => void
+  onAdd: (id: number) => void
+  onRemove: (id: number) => void
+}
+
+export function MenuGrid({
+  items,
+  favorites,
+  cart,
+  onToggleFavorite,
+  onAdd,
+  onRemove,
+}: MenuGridProps) {
+
+  if (items.length === 0) {
+
+    return (
+      <Card className="rounded-2xl border bg-white p-10 text-center">
+
+        <Utensils className="mx-auto mb-3 h-8 w-8 text-gray-300" />
+
+        <h3 className="text-sm font-semibold">
+          No dishes found
+        </h3>
+
+        <p className="mt-1 text-[9px] text-muted-foreground">
+          Try another search or category.
+        </p>
+
+      </Card>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+
+      {items.map((item) => (
+
+        <MenuCard
+          key={item.id}
+          item={item}
+          isFavorite={favorites.includes(item.id)}
+          quantity={cart[item.id] || 0}
+          onToggleFavorite={onToggleFavorite}
+          onAdd={onAdd}
+          onRemove={onRemove}
+        />
+
+      ))}
+
+    </div>
+  )
+}

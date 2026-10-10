@@ -48,6 +48,14 @@ public class DataInitializer implements CommandLineRunner {
             return;
         }
 
+        // The seed email may already be registered under a different role
+        // (e.g. it was re-assigned to OWNER). Inserting again would violate
+        // the unique email constraint and crash startup, so skip instead.
+        if (userRepository.existsByEmail(adminEmail)) {
+            log.warn("DataInitializer: {} already exists with a non-SUPER_ADMIN role — skipping seed.", adminEmail);
+            return;
+        }
+
         User superAdmin = User.builder()
                 .fullName(adminName)
                 .email(adminEmail)

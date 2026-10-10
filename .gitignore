@@ -1,119 +1,39 @@
-# ═══════════════════════════════════════════════════════════════════
-#  Plato — Root .gitignore
-#  Covers: Java/Maven, Spring Boot, secrets, IDE, OS, logs, Docker
-# ═══════════════════════════════════════════════════════════════════
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
+# testing
+/coverage
 
-# ── Secrets & Environment Variables ────────────────────────────────
-# NEVER commit real credentials. Use environment variables instead.
+# next.js
+/.next/
+/out/
 
-.env
-.env.*
-!.env.example          # example file with placeholders IS safe to commit
+# production
+/build
 
-*.pem
-*.key
-*.p12
-*.jks
-*.keystore
-*.truststore
-
-
-# ── Spring Boot Local Overrides ─────────────────────────────────────
-# application-local.yml / application-local.properties are for local
-# developer settings (DB creds, local ports, debug flags).
-# They should never go into version control.
-
-**/application-local.yml
-**/application-local.properties
-**/application-secret.yml
-**/application-secret.properties
-
-
-# ── Maven Build Output ───────────────────────────────────────────────
-
-target/
-!**/src/main/**/target/
-!**/src/test/**/target/
-
-*.class
-*.jar
-*.war
-*.ear
-*.nar
-
-.mvn/wrapper/maven-wrapper.jar
-
-
-# ── Logs ─────────────────────────────────────────────────────────────
-
-logs/
-*.log
-*.log.*
-spring.log
-
-
-# ── IntelliJ IDEA ────────────────────────────────────────────────────
-
-.idea/
-*.iml
-*.iws
-*.ipr
-out/
-
-
-# ── Eclipse / STS ────────────────────────────────────────────────────
-
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings/
-.springBeans
-.sts4-cache
-
-
-# ── VS Code ──────────────────────────────────────────────────────────
-
-.vscode/
-
-
-# ── NetBeans ─────────────────────────────────────────────────────────
-
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-
-# ── macOS ────────────────────────────────────────────────────────────
-
+# misc
 .DS_Store
-.AppleDouble
-.LSOverride
-._*
+*.pem
 
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# ── Windows ──────────────────────────────────────────────────────────
+# env files (can opt-in for committing if needed)
+.env*
 
-Thumbs.db
-ehthumbs.db
-Desktop.ini
+# typescript
+*.tsbuildinfo
+next-env.d.ts
 
-
-# ── Docker ───────────────────────────────────────────────────────────
-# Docker override files often contain local secrets or port mappings.
-
-docker-compose.override.yml
-
-
-# ── Misc ──────────────────────────────────────────────────────────────
-
-HELP.md
-*.tmp
-*.swp
-*.bak
+# backend local config
+application-local.yml

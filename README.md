@@ -1,565 +1,125 @@
-# Plato — Restaurant Management & QR Ordering Backend
+# Plato - QR-Based Restaurant Management System
 
-> A production-ready REST API backend for a multi-tenant restaurant platform. Restaurant owners can manage their menus, staff, and tables. Customers scan a QR code at the table, browse the live menu, place orders, and pay — all from their phone with no app install required.
-
----
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [Running Locally](#running-locally)
-- [API Reference](#api-reference)
-- [Database Schema](#database-schema)
-- [Security Architecture](#security-architecture)
-- [Build Status](#build-status)
+Plato is a full-stack restaurant management platform featuring table QR ordering, employee management, kitchen workflow, order tracking, and an admin dashboard.
 
 ---
 
-## Overview
+## 🏗️ Architecture
 
-Plato is a **multi-tenant SaaS backend** for restaurants. A single deployment serves multiple independent restaurant owners, each fully isolated from one another.
-
-### Two types of users
-
-| Actor | What they do |
-|-------|-------------|
-| **Restaurant Owner / Staff** | Login with JWT → manage restaurant, menu, tables, employees, orders |
-| **Customer** | Scan QR at table → get a session token → browse menu → place orders → pay → rate |
-
-### Core flows built
-
-1. **Auth** — Staff JWT login, token validation, role-based access control
-2. **Users** — Super admin manages all platform users (`OWNER`, `EMPLOYEE`, `SUPER_ADMIN` roles)
-3. **Restaurants** — Owners create and configure restaurants, settings (tax %, payment methods), and lifecycle management
-4. **Tables & QR** — Owners add tables, each gets a cryptographically secure QR token; regeneration invalidates old tokens
-5. **Employees** — Owners assign `EMPLOYEE` users to their restaurant with job roles (`MANAGER`, `CHEF`, `WAITER`, `CASHIER`)
-
-### Planned flows (in progress)
-
-Menu management → Customer sessions → Cart → Orders → Payments → Feedback → WebSocket real-time kitchen updates
+- **Frontend**: Next.js 16 (React 19, Tailwind CSS v4, Radix/shadcn-style UI) running on port `3000`
+- **Backend**: Spring Boot 3.5 (Java 21, Spring Data JPA, Spring Security, JWT, Flyway, WebSocket, OpenAPI/Swagger) running on port `8080`
+- **Database**: PostgreSQL (Default port `5432`, database: `plato_db`)
 
 ---
 
-## Tech Stack
+## 📋 Prerequisites
 
-| Layer | Technology |
-|-------|-----------|
-| Language | Java 21 |
-| Framework | Spring Boot 3.5.5 |
-| Security | Spring Security 6 + JJWT 0.12.7 (HS384 signed JWTs) |
-| Persistence | Spring Data JPA + Hibernate 6 |
-| Database | PostgreSQL |
-| Migrations | Flyway |
-| Validation | Jakarta Bean Validation (`@Valid`, `@NotBlank`, `@Email`) |
-| API Docs | SpringDoc OpenAPI 3 (Swagger UI at `/swagger-ui.html`) |
-| WebSocket | Spring WebSocket (STOMP over SockJS) |
-| Build Tool | Maven (Maven Wrapper included) |
-| Boilerplate | Lombok |
+Before running the project, make sure you have installed:
+- [Node.js](https://nodejs.org/) (v20+ recommended) & npm
+- [Java Development Kit (JDK) 21+](https://www.oracle.com/java/technologies/downloads/#java21)
+- [PostgreSQL](https://www.postgresql.org/download/) (v15+)
 
 ---
 
-## Project Structure
+## 🚀 Quick Start Guide
 
-```
-backend/
-└── src/
-    ├── main/
-    │   ├── java/com/miniproject/plato/
-    │   │   ├── PlatoApplication.java
-    │   │   │
-    │   │   ├── auth/                          # JWT login
-    │   │   │   ├── AuthController.java
-    │   │   │   ├── AuthService.java
-    │   │   │   ├── AuthServiceImpl.java
-    │   │   │   └── dto/
-    │   │   │       ├── LoginRequest.java
-    │   │   │       └── LoginResponse.java
-    │   │   │
-    │   │   ├── modules/                       # Feature modules
-    │   │   │   ├── user/                      # Staff user management
-    │   │   │   │   ├── User.java
-    │   │   │   │   ├── UserRole.java          # SUPER_ADMIN | OWNER | EMPLOYEE
-    │   │   │   │   ├── UserStatus.java        # ACTIVE | SUSPENDED | DELETED
-    │   │   │   │   ├── UserRepository.java
-    │   │   │   │   ├── UserService.java
-    │   │   │   │   ├── UserServiceImpl.java
-    │   │   │   │   ├── UserMapper.java
-    │   │   │   │   ├── UserController.java
-    │   │   │   │   ├── DataInitializer.java   # Seeds SUPER_ADMIN on first boot
-    │   │   │   │   └── dto/
-    │   │   │   │       ├── CreateUserRequest.java
-    │   │   │   │       ├── UpdateUserRequest.java
-    │   │   │   │       └── UserResponse.java
-    │   │   │   │
-    │   │   │   ├── restaurant/                # Restaurant management
-    │   │   │   │   ├── Restaurant.java
-    │   │   │   │   ├── RestaurantStatus.java  # ACTIVE | INACTIVE | SUSPENDED
-    │   │   │   │   ├── RestaurantRepository.java
-    │   │   │   │   ├── RestaurantService.java
-    │   │   │   │   ├── RestaurantServiceImpl.java
-    │   │   │   │   ├── RestaurantMapper.java
-    │   │   │   │   ├── RestaurantController.java
-    │   │   │   │   └── dto/
-    │   │   │   │       ├── CreateRestaurantRequest.java
-    │   │   │   │       ├── UpdateRestaurantRequest.java
-    │   │   │   │       ├── RestaurantSettingsRequest.java
-    │   │   │   │       └── RestaurantResponse.java
-    │   │   │   │
-    │   │   │   ├── table/                     # Tables & QR code management
-    │   │   │   │   ├── RestaurantTable.java
-    │   │   │   │   ├── TableStatus.java       # AVAILABLE | OCCUPIED | RESERVED
-    │   │   │   │   ├── TableRepository.java
-    │   │   │   │   ├── QrTokenService.java    # SecureRandom 64-char hex token
-    │   │   │   │   ├── TableService.java
-    │   │   │   │   ├── TableServiceImpl.java
-    │   │   │   │   ├── TableMapper.java
-    │   │   │   │   ├── TableController.java
-    │   │   │   │   └── dto/
-    │   │   │   │       ├── CreateTableRequest.java
-    │   │   │   │       ├── UpdateTableRequest.java
-    │   │   │   │       └── TableResponse.java
-    │   │   │   │
-    │   │   │   └── employee/                  # Restaurant staff assignments
-    │   │   │       ├── Employee.java
-    │   │   │       ├── EmployeeRole.java      # MANAGER | CHEF | WAITER | CASHIER
-    │   │   │       ├── EmployeeRepository.java
-    │   │   │       ├── EmployeeService.java
-    │   │   │       ├── EmployeeServiceImpl.java
-    │   │   │       ├── EmployeeMapper.java
-    │   │   │       ├── EmployeeController.java
-    │   │   │       └── dto/
-    │   │   │           ├── AssignEmployeeRequest.java
-    │   │   │           ├── UpdateEmployeeRoleRequest.java
-    │   │   │           └── EmployeeResponse.java
-    │   │   │
-    │   │   ├── common/                        # Shared building blocks
-    │   │   │   ├── BaseEntity.java            # UUID PK + createdAt + updatedAt
-    │   │   │   ├── ApiResponse.java           # Universal response envelope
-    │   │   │   └── PagedResponse.java
-    │   │   │
-    │   │   ├── config/
-    │   │   │   ├── AppConfig.java             # BCrypt PasswordEncoder bean
-    │   │   │   └── SecurityConfig.java        # Filter chain, CORS, CSRF, session
-    │   │   │
-    │   │   ├── security/
-    │   │   │   ├── JwtAuthenticationFilter.java
-    │   │   │   ├── JwtTokenProvider.java      # Sign, validate, extract claims
-    │   │   │   └── UserDetailsServiceImpl.java
-    │   │   │
-    │   │   └── exception/
-    │   │       ├── GlobalExceptionHandler.java
-    │   │       ├── PlatoException.java        # Base exception
-    │   │       ├── ResourceNotFoundException.java   # 404
-    │   │       ├── ConflictException.java           # 409
-    │   │       ├── UnauthorizedAccessException.java # 403
-    │   │       └── ValidationException.java         # 400
-    │   │
-    │   └── resources/
-    │       ├── application.yml                # Base config (uses ENV variables)
-    │       ├── application-local.yml          # Local dev overrides (git-ignored)
-    │       └── db/migration/
-    │           ├── V1__create_enums.sql       # All PostgreSQL custom enum types
-    │           ├── V2__create_users.sql
-    │           ├── V3__create_restaurants.sql
-    │           ├── V4__create_restaurant_tables.sql
-    │           └── V5__create_employees.sql
-    │
-    └── test/
-        └── java/com/miniproject/plato/
-            └── (unit tests — Day 13)
-```
+### Step 1: Database Setup
+
+1. Start your local PostgreSQL service.
+2. Create the database `plato_db` using psql or pgAdmin:
+   ```sql
+   CREATE DATABASE plato_db;
+   ```
+   > By default, the local configuration connects using username `postgres` and password `postgres`.
+   > If your credentials differ, update `backend/src/main/resources/application-local.yml` or set environment variables `DB_USER` and `DB_PASSWORD`.
+
+3. *(Optional)* Load demo seed data:
+   **PowerShell**:
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File backend\demo\seed-demo.ps1
+   ```
+   *(Or execute `backend/demo/demo_seed.sql` directly into `plato_db`).*
 
 ---
 
-## Getting Started
+### Step 2: Run the Backend (Spring Boot)
 
-### Prerequisites
+1. Open a terminal and navigate to the `backend` directory:
+   ```bash
+   cd backend
+   ```
 
-- Java 21+
-- Maven 3.9+ (or use `./mvnw` wrapper — no install needed)
-- PostgreSQL 15+
+2. Start the backend with the `local` profile:
 
-### 1. Create the database
+   - **Windows PowerShell**:
+     ```powershell
+     .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+     ```
+     *(Note: Keep quotes around `"-Dspring-boot.run.profiles=local"` so PowerShell passes the property intact to Maven).*
 
-```bash
-psql -U postgres -c "CREATE DATABASE plato;"
-```
+   - **Windows Command Prompt (cmd.exe)**:
+     ```cmd
+     mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local
+     ```
 
-### 2. Clone the repo
+   - **Linux / macOS**:
+     ```bash
+     ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
+     ```
 
-```bash
-git clone https://github.com/Ashutosh-negi07/Plato.git
-cd Plato
-```
-
-### 3. Set up local config
-
-The base `application.yml` reads from environment variables. For local development, create the override file:
-
-```bash
-cp backend/src/main/resources/application-local.yml.example \
-   backend/src/main/resources/application-local.yml
-```
-
-Edit `application-local.yml` with your local PostgreSQL credentials (see [Environment Variables](#environment-variables)).
-
-### 4. Run
-
-```bash
-cd backend
-./mvnw spring-boot:run -Dspring-boot.run.profiles=local
-```
-
-### 5. Verify
-
-```
-http://localhost:8080/actuator/health       → {"status":"UP"}
-http://localhost:8080/swagger-ui.html       → Interactive API explorer
-```
-
-On first boot, Flyway applies all migrations and `DataInitializer` seeds a Super Admin account using the credentials from your config.
+3. Verify: Once you see `Tomcat started on port 8080 (http)` and `Started PlatoApplication`, the backend is ready:
+   - Base URL: `http://localhost:8080`
+   - Swagger / OpenAPI Docs: `http://localhost:8080/swagger-ui/index.html`
 
 ---
 
-## Environment Variables
+### Step 3: Run the Frontend (Next.js)
 
-| Variable | Required | Description | Local default |
-|---|---|---|---|
-| `DB_URL` | ✅ | PostgreSQL JDBC URL | `jdbc:postgresql://localhost:5432/plato` |
-| `DB_USER` | ✅ | Database username | System username |
-| `DB_PASSWORD` | ✅ | Database password | *(empty for Homebrew installs)* |
-| `JWT_SECRET` | ✅ | HS384 signing secret (min 32 chars) | `local-dev-secret-do-not-use-in-...` |
-| `ADMIN_EMAIL` | ✅ | Email for the seeded Super Admin account | `admin@plato.com` |
-| `ADMIN_PASSWORD` | ✅ | Password for the seeded Super Admin account | `Admin@1234` |
-| `ADMIN_NAME` | ❌ | Display name for the Super Admin | `Super Admin` |
-| `QR_BASE_URL` | ❌ | Base URL prefix embedded in QR codes | `http://localhost:3000/qr` |
+1. Open a separate terminal in the root project directory (`Plato/`):
 
-In production, set these as environment variables or Docker secrets. **Never commit `application-local.yml` to version control.**
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
----
+3. Start the Next.js development server:
+   ```bash
+   npm run dev
+   ```
 
-## API Reference
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-All endpoints are also browsable at `http://localhost:8080/swagger-ui.html`.
-
-Every response follows the same envelope shape:
-
-```json
-{
-  "success": true,
-  "message": "Restaurant created successfully",
-  "data": { ... }
-}
-```
+> [!NOTE]
+> During development, API calls made to `/api/v1/:path*` are automatically proxied to the backend at `http://localhost:8080/api/v1/:path*` via `next.config.ts`. Always start the backend first to prevent connection errors.
 
 ---
 
-### Auth
+## 🔑 Demo Credentials
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/v1/auth/login` | Public | Login with email + password → returns JWT |
+| Role | Email | Password |
+|---|---|---|
+| **Admin** | `admin@plato.com` | `password123` |
 
-**Request body**:
-```json
-{ "email": "admin@plato.com", "password": "Admin@1234" }
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "message": "Login successful",
-  "data": {
-    "accessToken": "eyJhbGci...",
-    "tokenType": "Bearer",
-    "role": "SUPER_ADMIN",
-    "fullName": "Super Admin"
-  }
-}
-```
-
-Pass the token on every subsequent request:
-```
-Authorization: Bearer eyJhbGci...
-```
+Login page: [http://localhost:3000/login](http://localhost:3000/login)
 
 ---
 
-### Users
-
-> All endpoints require `Authorization: Bearer <token>`
-
-| Method | Endpoint | Role | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/v1/users` | SUPER_ADMIN | Paginated list of all users |
-| `POST` | `/api/v1/users` | SUPER_ADMIN | Create a new user |
-| `GET` | `/api/v1/users/{id}` | SUPER_ADMIN or self | Get user by ID |
-| `PUT` | `/api/v1/users/{id}` | SUPER_ADMIN or self | Update user details |
-| `PATCH` | `/api/v1/users/{id}/status` | SUPER_ADMIN | Activate / suspend / delete |
-| `DELETE` | `/api/v1/users/{id}` | SUPER_ADMIN | Soft delete (sets status = DELETED) |
-
-**Create user body**:
-```json
-{
-  "fullName": "Alice Owner",
-  "email": "alice@restaurant.com",
-  "password": "Secret@123",
-  "phone": "9876543210",
-  "role": "OWNER"
-}
-```
-
-**User roles**: `SUPER_ADMIN` | `OWNER` | `EMPLOYEE`
-
----
-
-### Restaurants
-
-> All endpoints require `Authorization: Bearer <token>`
-
-| Method | Endpoint | Role | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/v1/restaurants` | OWNER | Create a restaurant |
-| `GET` | `/api/v1/restaurants` | OWNER / SUPER_ADMIN | List (OWNER sees own, SUPER_ADMIN sees all) |
-| `GET` | `/api/v1/restaurants/{id}` | OWNER / SUPER_ADMIN | Get one restaurant |
-| `PUT` | `/api/v1/restaurants/{id}` | OWNER | Update name, location, contact info |
-| `PATCH` | `/api/v1/restaurants/{id}/status` | SUPER_ADMIN | Change status (`?value=SUSPENDED`) |
-| `GET` | `/api/v1/restaurants/{id}/settings` | OWNER | Get payment & order settings |
-| `PUT` | `/api/v1/restaurants/{id}/settings` | OWNER | Update payment & order settings |
-
-**Create restaurant body** (all fields except `name` are optional):
-```json
-{
-  "name": "Spice Garden",
-  "description": "Authentic Indian cuisine",
-  "phone": "9876543210",
-  "email": "contact@spicegarden.com",
-  "address": "42 MG Road",
-  "city": "Mumbai",
-  "state": "Maharashtra",
-  "country": "India",
-  "zipcode": "400001",
-  "timezone": "Asia/Kolkata",
-  "openingTime": "09:00",
-  "closingTime": "23:00",
-  "taxPercentage": 5.00,
-  "serviceCharge": 2.50,
-  "allowCashPayment": true,
-  "allowCardPayment": true,
-  "allowUpi": true,
-  "allowOnlinePayment": false,
-  "acceptingOrders": true,
-  "autoAcceptOrders": false
-}
-```
-
-**Restaurant statuses**: `ACTIVE` | `INACTIVE` | `SUSPENDED`
-
----
-
-### Tables & QR Codes
-
-> All endpoints require `Authorization: Bearer <token>`
-
-| Method | Endpoint | Role | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/v1/restaurants/{id}/tables` | OWNER | Create table — auto-generates QR token |
-| `GET` | `/api/v1/restaurants/{id}/tables` | OWNER / SUPER_ADMIN | List all tables for a restaurant |
-| `GET` | `/api/v1/restaurants/{id}/tables/{tableId}` | OWNER / SUPER_ADMIN | Get single table |
-| `PUT` | `/api/v1/restaurants/{id}/tables/{tableId}` | OWNER | Update capacity or label |
-| `DELETE` | `/api/v1/restaurants/{id}/tables/{tableId}` | OWNER | Hard delete a table |
-| `POST` | `/api/v1/restaurants/{id}/tables/{tableId}/qr/regenerate` | OWNER | Regenerate QR token — invalidates old URL |
-
-**Create table body**:
-```json
-{ "tableNumber": "T1", "capacity": 4, "label": "Window Seat" }
-```
-
----
-
-### Employees
-
-> All endpoints require `Authorization: Bearer <token>`
-
-| Method | Endpoint | Role | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/v1/restaurants/{id}/employees` | OWNER | Assign a user (must have `EMPLOYEE` role) to this restaurant |
-| `GET` | `/api/v1/restaurants/{id}/employees` | OWNER / SUPER_ADMIN | List all active employees |
-| `PATCH` | `/api/v1/restaurants/{id}/employees/{eid}/role` | OWNER | Change employee's job role |
-| `DELETE` | `/api/v1/restaurants/{id}/employees/{eid}` | OWNER | Soft deactivate — sets `is_active = false` |
-
-**Assign employee body**:
-```json
-{ "userId": "uuid-of-employee-user", "role": "CHEF" }
-```
-**Employee job roles**: `MANAGER` | `CHEF` | `WAITER` | `CASHIER`
-
----
-
-### Menu
-
-> Management endpoints require `Authorization: Bearer <token>` (OWNER)  
-> Public catalog is open to customers without credentials.
-
-| Method | Endpoint | Role | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/v1/restaurants/{id}/menu/categories` | OWNER | Create menu category |
-| `GET` | `/api/v1/restaurants/{id}/menu` | PUBLIC | View full active restaurant menu catalog |
-| `POST` | `/api/v1/restaurants/{id}/menu/items` | OWNER | Add menu item under a category |
-| `PUT` | `/api/v1/restaurants/{id}/menu/items/{itemId}` | OWNER | Update dish price, name, description |
-| `PATCH` | `/api/v1/restaurants/{id}/menu/items/{itemId}/availability` | OWNER | Toggle dish availability (in stock / out of stock) |
-
----
-
-### Customer Sessions
-
-> Customer entry is initiated by scanning the physical table QR code.  
-> Authenticated via `X-Session-Token` header.
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/v1/customer/sessions/start` | PUBLIC (QR Token) | Start or rejoin a dining session at a table |
-| `GET` | `/api/v1/customer/sessions/current` | `X-Session-Token` | Get active session metadata (extends 30-min window) |
-| `POST` | `/api/v1/restaurants/{restaurantId}/sessions/{sessionId}/close` | OWNER / EMPLOYEE / SUPER_ADMIN | Staff closes session and releases table to AVAILABLE |
-
-**Start session body**:
-```json
-{ "qrToken": "uuid-token-from-table-qr-sticker", "guestCount": 2 }
-```
-
----
-
-### Orders
-
-> Customer order actions authenticated via `X-Session-Token` header.  
-> Kitchen & staff management authenticated via `Authorization: Bearer <token>`.
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/api/v1/customer/orders` | `X-Session-Token` | Place order from table (captures price snapshot) |
-| `GET` | `/api/v1/customer/orders` | `X-Session-Token` | List all orders for current dining session |
-| `GET` | `/api/v1/customer/orders/{id}` | `X-Session-Token` | Get order status and line items |
-| `PATCH` | `/api/v1/customer/orders/{id}/cancel` | `X-Session-Token` | Cancel pending order |
-| `DELETE` | `/api/v1/customer/orders/{id}/items/{itemId}` | `X-Session-Token` | Remove line item from pending order |
-| `GET` | `/api/v1/restaurants/{id}/orders` | OWNER / EMPLOYEE / SUPER_ADMIN | Live kitchen order queue (FIFO sorted) |
-| `PATCH` | `/api/v1/orders/{id}/status` | OWNER / EMPLOYEE / SUPER_ADMIN | Advance kitchen order stage (ACCEPTED -> PREPARING -> READY -> SERVED) |
-
----
-
-### Billing & Payments
-
-> Customer actions authenticated via `X-Session-Token` header.  
-> Staff checkout authenticated via `Authorization: Bearer <token>`.
-
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/api/v1/customer/billing/summary` | `X-Session-Token` | Real-time bill summary aggregated across all orders |
-| `POST` | `/api/v1/customer/billing/request-bill` | `X-Session-Token` | Request bill with payment method (CASH, CARD, UPI) |
-| `GET` | `/api/v1/customer/billing/payment` | `X-Session-Token` | Check payment status for current session |
-| `GET` | `/api/v1/restaurants/{id}/payments` | OWNER / EMPLOYEE / SUPER_ADMIN | List payments / bill requests for a restaurant |
-| `GET` | `/api/v1/restaurants/{id}/payments/{id}` | OWNER / EMPLOYEE / SUPER_ADMIN | View specific payment details |
-| `POST` | `/api/v1/restaurants/{id}/payments/{id}/complete` | OWNER / EMPLOYEE / SUPER_ADMIN | Confirm payment, close session, and release table |
-
----
-
-### Upcoming Endpoints (in development)
-
-| Module | Endpoints |
-|--------|-----------|
-| Feedback | `POST /feedback`, `GET /restaurants/{id}/feedback/summary` |
-| WebSockets | Real-time kitchen & order status pushes |
-
----
-
-## Database Schema
-
-Migrations live in `backend/src/main/resources/db/migration/`. Flyway applies them in version order exactly once.
-
-```
-V1__create_enums.sql          # user_role, user_status, restaurant_status, employee_role,
-                              # table_status, session_status, order_status, order_item_status,
-                              # payment_method, payment_status
-
-V2__create_users.sql          # users table
-
-V3__create_restaurants.sql    # restaurants table (includes embedded settings columns)
-
-V4__create_restaurant_tables  # restaurant_tables + secure qr_token   ✅ Applied
-V5__create_employees          # employees with role per restaurant     ✅ Applied
-V6__create_menu               # menu_categories + menu_items          ✅ Applied
-V7__create_customer_sessions  # customer_sessions + session_token     ✅ Applied
-V8__create_orders             # orders + order_items                  ✅ Applied
-V9__create_payments           # payments with bill breakdown          ✅ Applied
-V10__create_feedback          # feedback with rating 1–5 (planned)
-```
-
----
-
-## Security Architecture
-
-```
-HTTP Request
-     │
-     ▼
-JwtAuthenticationFilter          Runs on EVERY request. Extracts and validates
-     │                           JWT from Authorization header. Populates
-     │                           SecurityContextHolder with userId + role.
-     ▼
-@PreAuthorize on Controller      Spring Security evaluates SpEL expression.
-     │                           hasRole('OWNER') → checks for ROLE_OWNER authority.
-     │                           Throws AccessDeniedException (403) if mismatch.
-     ▼
-Service Layer                    Re-validates ownership at business level:
-     │                           restaurant.getOwnerId().equals(callerId)
-     │                           Throws UnauthorizedAccessException (403) if mismatch.
-     ▼
-GlobalExceptionHandler           Catches ALL exceptions and maps them to
-                                 consistent ApiResponse JSON bodies.
-```
-
-**Token lifetime**: 24 hours (configurable via `plato.jwt.expiration`)
-
-**Algorithm**: HS384 (HMAC-SHA384)
-
-**Principal stored in token**: `userId` (UUID string) — never email or PII
-
----
-
-## Build Status
-
-### Modules Complete ✅
-
-- Foundation (Security, Config, Exception handling, Base entity)
-- Auth (`POST /api/v1/auth/login`)
-- User Module — 6 endpoints — curl verified
-- Restaurant Module — 7 endpoints including settings — curl verified
-- Table Module — 6 endpoints + QR token generation — curl verified
-- Employee Module — 4 endpoints + soft deactivation — compiled & ready
-- Menu Module — 5 endpoints (categories, items, availability, public catalog) ✅
-- Customer Session Module — 3 endpoints (start, current/heartbeat, staff close) ✅
-- Order Module — 7 endpoints (place, view, cancel, remove item, kitchen workflow) ✅
-- Billing & Payments Module — 6 endpoints (summary, request bill, complete payment, table release) ✅
-
-### Modules In Progress 🔧
-
-- Feedback (V10)
-- WebSocket real-time updates
-- Unit + Integration tests
-
-### Run the tests
-
-```bash
-cd backend
-./mvnw test
-```
-
----
-
-## License
-
-This project is built as a learning portfolio for SDE-1/SDE-2 backend engineering roles.
+## 🛠️ Common Troubleshooting
+
+### 1. `LifecyclePhaseNotFoundException` in PowerShell
+- **Problem**: Running `.\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=local` fails because PowerShell interprets `-D...` as a parameter.
+- **Solution**: Wrap the property in quotes:
+  ```powershell
+  .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=local"
+  ```
+
+### 2. `ECONNREFUSED 127.0.0.1:8080` on `npm run dev`
+- **Problem**: Next.js attempts to reach the backend service proxy on port 8080 before it has booted.
+- **Solution**: Start the backend in Terminal 1 first until it finishes loading, then run `npm run dev` in Terminal 2.
+
+### 3. Flyway Migration or Database Connection Issues
+- Verify that PostgreSQL service is running on port 5432:
+  ```powershell
+  Test-NetConnection -ComputerName localhost -Port 5432
+  ```
+- Ensure the database `plato_db` has been created.
