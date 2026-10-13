@@ -43,9 +43,10 @@ public class RestaurantController {
     // ── 2. List restaurants ──────────────────────────────────────────────────
     // SUPER_ADMIN → all restaurants (paginated)
     // OWNER → only their own restaurants (paginated)
+    // EMPLOYEE → only restaurants they are assigned to (paginated)
     // The service decides which query to run based on role.
     @GetMapping
-    @PreAuthorize("hasAnyRole('OWNER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('OWNER', 'EMPLOYEE', 'SUPER_ADMIN')")
     public ApiResponse<Page<RestaurantResponse>> getAllRestaurants(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         UUID callerId = getCurrentUserId();
@@ -57,8 +58,9 @@ public class RestaurantController {
     // ── 3. Get one restaurant ────────────────────────────────────────────────
     // SUPER_ADMIN → any restaurant
     // OWNER → only their own (service throws 403 if not theirs)
+    // EMPLOYEE → only restaurants they are assigned to
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('OWNER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('OWNER', 'EMPLOYEE', 'SUPER_ADMIN')")
     public ApiResponse<RestaurantResponse> getRestaurantById(@PathVariable UUID id) {
         UUID callerId = getCurrentUserId();
         String role = getCurrentRole();

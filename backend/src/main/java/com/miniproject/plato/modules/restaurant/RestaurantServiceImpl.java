@@ -6,6 +6,8 @@ import com.miniproject.plato.modules.restaurant.dto.CreateRestaurantRequest;
 import com.miniproject.plato.modules.restaurant.dto.RestaurantResponse;
 import com.miniproject.plato.modules.restaurant.dto.RestaurantSettingsRequest;
 import com.miniproject.plato.modules.restaurant.dto.UpdateRestaurantRequest;
+import com.miniproject.plato.modules.employee.Employee;
+import com.miniproject.plato.modules.employee.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -23,6 +26,7 @@ public class RestaurantServiceImpl implements RestaurantService {
 
     private final RestaurantMapper restaurantMapper;
     private final RestaurantRepository restaurantRepository;
+    private final EmployeeRepository employeeRepository;
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
@@ -49,9 +53,18 @@ public class RestaurantServiceImpl implements RestaurantService {
     @Override
     public Page<RestaurantResponse> getAllRestaurants(UUID callerId, String role, Pageable pageable) {
         // SUPER_ADMIN sees all restaurants
+        // EMPLOYEE sees only restaurants they are actively assigned to
         // OWNER sees only their own
         if ("SUPER_ADMIN".equals(role)) {
             return restaurantRepository.findAll(pageable)
+                    .map(restaurantMapper::toResponse);
+        } else if ("EMPLOYEE".equals(role)) {
+            List<UUID> restaurantIds = employeeRepository.findByUserIdAndIsActiveTrue(callerId)
+                    .stream()
+                    .map(Employee::getRestaurantId)
+                    .distinct()
+                    .toList();
+            return restaurantRepository.findByIdIn(restaurantIds, pageable)
                     .map(restaurantMapper::toResponse);
         } else {
             return restaurantRepository.findByOwnerId(callerId, pageable)
@@ -64,8 +77,20 @@ public class RestaurantServiceImpl implements RestaurantService {
         Restaurant restaurant = restaurantRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", id));
 
+        if ("SUPER_ADMIN".equals(role)) {
+            return restaurantMapper.toResponse(restaurant);
+        }
+
+        // EMPLOYEE can only see restaurants they are assigned to
+        if ("EMPLOYEE".equals(role)) {
+            if (!employeeRepository.existsByUserIdAndRestaurantIdAndIsActiveTrue(callerId, id)) {
+                throw new UnauthorizedAccessException("You are not assigned to this restaurant");
+            }
+            return restaurantMapper.toResponse(restaurant);
+        }
+
         // OWNER can only see their own
-        if (!"SUPER_ADMIN".equals(role) && !restaurant.getOwnerId().equals(callerId)) {
+        if (!restaurant.getOwnerId().equals(callerId)) {
             throw new UnauthorizedAccessException("You do not own this restaurant");
         }
 

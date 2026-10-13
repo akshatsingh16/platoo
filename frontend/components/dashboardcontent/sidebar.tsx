@@ -9,6 +9,7 @@ import {
   Table2,
   ClipboardList,
   Users,
+  UserCog,
   CreditCard,
   Settings,
   LogOut,
@@ -88,6 +89,19 @@ export function AppSidebar() {
     router.push("/login")
   }
 
+  const menuItems = [
+    ...mainItems,
+    ...(user?.role === "SUPER_ADMIN"
+      ? [
+          {
+            title: "Users",
+            url: "/dashboard/users",
+            icon: UserCog,
+          },
+        ]
+      : []),
+  ]
+
   return (
     <Sidebar>
 
@@ -121,7 +135,7 @@ export function AppSidebar() {
 
           <SidebarMenu className="gap-1">
 
-            {mainItems.map((item) => (
+            {menuItems.map((item) => (
               <SidebarMenuItem key={item.title}>
 
                 <SidebarMenuButton

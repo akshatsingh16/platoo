@@ -10,6 +10,16 @@ Plato is a full-stack restaurant management platform featuring table QR ordering
 - **Backend**: Spring Boot 3.5 (Java 21, Spring Data JPA, Spring Security, JWT, Flyway, WebSocket, OpenAPI/Swagger) running on port `8080`
 - **Database**: PostgreSQL (Default port `5432`, database: `plato_db`)
 
+### 📁 Project Structure
+
+```
+Plato/
+├── frontend/   # Next.js app (app/, components/, lib/, hooks/, public/, package.json)
+├── backend/    # Spring Boot API (src/, pom.xml, mvnw, demo seed scripts)
+├── docs/       # Project report and report generation scripts
+└── README.md
+```
+
 ---
 
 ## 📋 Prerequisites
@@ -75,7 +85,10 @@ Before running the project, make sure you have installed:
 
 ### Step 3: Run the Frontend (Next.js)
 
-1. Open a separate terminal in the root project directory (`Plato/`):
+1. Open a separate terminal and navigate to the `frontend` directory:
+   ```bash
+   cd frontend
+   ```
 
 2. Install dependencies:
    ```bash
@@ -90,7 +103,7 @@ Before running the project, make sure you have installed:
 4. Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 > [!NOTE]
-> During development, API calls made to `/api/v1/:path*` are automatically proxied to the backend at `http://localhost:8080/api/v1/:path*` via `next.config.ts`. Always start the backend first to prevent connection errors.
+> During development, API calls made to `/api/v1/:path*` are automatically proxied to the backend at `http://localhost:8080/api/v1/:path*` via `frontend/next.config.ts`. Always start the backend first to prevent connection errors.
 
 ---
 
@@ -115,7 +128,7 @@ Login page: [http://localhost:3000/login](http://localhost:3000/login)
 
 ### 2. `ECONNREFUSED 127.0.0.1:8080` on `npm run dev`
 - **Problem**: Next.js attempts to reach the backend service proxy on port 8080 before it has booted.
-- **Solution**: Start the backend in Terminal 1 first until it finishes loading, then run `npm run dev` in Terminal 2.
+- **Solution**: Start the backend in Terminal 1 first until it finishes loading, then run `npm run dev` from `frontend/` in Terminal 2.
 
 ### 3. Flyway Migration or Database Connection Issues
 - Verify that PostgreSQL service is running on port 5432:

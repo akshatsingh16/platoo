@@ -53,7 +53,7 @@ public class TableController {
 
     // ── 2. List tables ────────────────────────────────────────────────────────
     @GetMapping
-    @PreAuthorize("hasAnyRole('OWNER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('OWNER', 'EMPLOYEE', 'SUPER_ADMIN')")
     public ApiResponse<List<TableResponse>> getTablesByRestaurant(
             @PathVariable UUID restaurantId) {
         UUID callerId = getCurrentUserId();
@@ -64,7 +64,7 @@ public class TableController {
 
     // ── 3. Get single table ───────────────────────────────────────────────────
     @GetMapping("/{tableId}")
-    @PreAuthorize("hasAnyRole('OWNER', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('OWNER', 'EMPLOYEE', 'SUPER_ADMIN')")
     public ApiResponse<TableResponse> getTableById(
             @PathVariable UUID restaurantId,
             @PathVariable UUID tableId) {

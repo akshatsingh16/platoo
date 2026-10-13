@@ -16,4 +16,10 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID> {
 
     // Fetch employee only if it belongs to this restaurant (cross-tenant safe)
     Optional<Employee> findByIdAndRestaurantId(UUID id, UUID restaurantId);
+
+    // All active restaurant assignments for a staff user (used for staff dashboard access)
+    List<Employee> findByUserIdAndIsActiveTrue(UUID userId);
+
+    // Is this user an active employee of this restaurant?
+    boolean existsByUserIdAndRestaurantIdAndIsActiveTrue(UUID userId, UUID restaurantId);
 }

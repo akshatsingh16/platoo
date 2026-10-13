@@ -3,7 +3,7 @@
 // Typed functions for every backend endpoint.
 // ═══════════════════════════════════════════════════════════════════
 
-import { getToken } from "./auth"
+import { getToken, logout } from "./auth"
 import type {
   ApiResponse,
   AssignEmployeeRequest,
@@ -71,15 +71,25 @@ async function fetchApi<T>(
     return undefined as T
   }
 
-  // Safely parse JSON — backend may return plain text on 500s
+  // Handle expired/invalid token — force re-login.
+  // 403 (Forbidden) means "wrong role", not "bad token", so we let callers handle it.
+  if (res.status === 401 && !path.startsWith("/auth/")) {
+    if (typeof window !== "undefined") {
+      logout()
+      window.location.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}&error=session_expired`)
+    }
+    throw new Error("Session expired. Please log in again.")
+  }
+
+  // Safely parse JSON — backend may return plain text/HTML on error
   let json: ApiResponse<T>
   try {
     json = await res.json()
   } catch {
     throw new Error(
-      !res.ok
-        ? `Server error (${res.status}). Is the backend running on port 8080?`
-        : `Invalid response from server`,
+      res.status === 401 || res.status === 403
+        ? "Unauthorized access. Please log in again."
+        : `Server error (${res.status})`,
     )
   }
 

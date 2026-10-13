@@ -8,6 +8,7 @@ import com.miniproject.plato.modules.restaurant.RestaurantRepository;
 import com.miniproject.plato.modules.table.dto.CreateTableRequest;
 import com.miniproject.plato.modules.table.dto.TableResponse;
 import com.miniproject.plato.modules.table.dto.UpdateTableRequest;
+import com.miniproject.plato.modules.employee.EmployeeRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ public class TableServiceImpl implements TableService {
     private final TableMapper tableMapper;
     private final QrTokenService qrTokenService;
     private final RestaurantRepository restaurantRepository;
+    private final EmployeeRepository employeeRepository;
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
@@ -40,11 +42,18 @@ public class TableServiceImpl implements TableService {
         return restaurant;
     }
 
-    /** Verifies restaurant exists and caller is either OWNER of it or SUPER_ADMIN. */
+    /** Verifies restaurant exists and caller has read access (OWNER, EMPLOYEE assigned, or SUPER_ADMIN). */
     private Restaurant verifyReadAccess(UUID restaurantId, UUID callerId, String callerRole) {
         Restaurant restaurant = restaurantRepository.findById(restaurantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Restaurant", restaurantId));
-        if (!"SUPER_ADMIN".equals(callerRole) && !restaurant.getOwnerId().equals(callerId)) {
+        if ("SUPER_ADMIN".equals(callerRole)) return restaurant;
+        if ("EMPLOYEE".equals(callerRole)) {
+            if (!employeeRepository.existsByUserIdAndRestaurantIdAndIsActiveTrue(callerId, restaurantId)) {
+                throw new UnauthorizedAccessException("You are not assigned to this restaurant");
+            }
+            return restaurant;
+        }
+        if (!restaurant.getOwnerId().equals(callerId)) {
             throw new UnauthorizedAccessException("You do not own this restaurant");
         }
         return restaurant;

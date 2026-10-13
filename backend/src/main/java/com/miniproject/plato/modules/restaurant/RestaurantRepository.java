@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.UUID;
 
 // =========================================================================
@@ -23,4 +24,7 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, UUID> {
 
     // Ownership check — does this restaurant belong to this owner?
     boolean existsByIdAndOwnerId(UUID id, UUID ownerId);
+
+    // Restaurants matching a set of IDs (paginated) — used for EMPLOYEE assignments
+    Page<Restaurant> findByIdIn(Collection<UUID> ids, Pageable pageable);
 }
